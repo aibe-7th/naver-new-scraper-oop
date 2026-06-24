@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="JDK 17과 약식 클린 아키텍처로 구현한 네이버 뉴스 스크래퍼 프로젝트 안내">
+  <title>네이버 뉴스 스크래퍼</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --near-black: #070707;
+      --primary: #553555;
+      --secondary: #755b69;
+      --accent: #96c5b0;
+      --accent-light: #adf1d2;
+      --surface: #f3faf7;
+      --line: #96c5b0;
+      --bs-body-color: var(--near-black);
+      --bs-link-color: var(--primary);
+      --bs-link-hover-color: var(--secondary);
+      --bs-primary-rgb: 85, 53, 85;
+      --bs-secondary-rgb: 117, 91, 105;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Noto Sans KR", sans-serif;
+      color: var(--near-black);
+      line-height: 1.75;
+      word-break: keep-all;
+    }
+
+    section { scroll-margin-top: 4.5rem; }
+
+    .navbar {
+      background: rgba(7, 7, 7, .95);
+      backdrop-filter: blur(12px);
+    }
+
+    .navbar .nav-link:hover, .navbar .nav-link:focus { color: var(--accent-light); }
+
+    .navbar-brand-mark {
+      display: inline-grid;
+      width: 2rem;
+      height: 2rem;
+      place-items: center;
+      border-radius: .6rem;
+      background: var(--primary);
+      color: var(--accent-light);
+      font-weight: 800;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 8.5rem 0 6rem;
+      background:
+        radial-gradient(circle at 88% 15%, rgba(173, 241, 210, .28), transparent 28rem),
+        linear-gradient(135deg, var(--near-black) 0%, var(--primary) 100%);
+      color: #fff;
+    }
+
+    .hero::after {
+      position: absolute;
+      right: -8rem;
+      bottom: -12rem;
+      width: 32rem;
+      height: 32rem;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .eyebrow {
+      color: var(--primary);
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .hero .eyebrow { color: var(--accent-light); }
+    .hero-title { max-width: 12ch; font-size: clamp(2.7rem, 7vw, 5.4rem); line-height: 1.08; }
+    .hero-copy { max-width: 42rem; color: #e5f7ef; font-size: clamp(1.05rem, 2vw, 1.25rem); }
+
+    .tech-badge {
+      border: 1px solid rgba(173, 241, 210, .45);
+      background: rgba(150, 197, 176, .14);
+      color: var(--accent-light);
+      font-weight: 500;
+    }
+
+    .btn-naver {
+      border-color: var(--accent-light);
+      background: var(--accent-light);
+      color: var(--near-black);
+      font-weight: 700;
+    }
+
+    .btn-naver:hover, .btn-naver:focus {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--near-black);
+    }
+
+    .section-soft { background: var(--surface); }
+    .section-heading { max-width: 42rem; }
+    .text-secondary { color: var(--secondary) !important; }
+
+    .feature-card, .layer-card {
+      height: 100%;
+      border-color: var(--line);
+      border-radius: 1.1rem;
+      box-shadow: 0 .5rem 2rem rgba(85, 53, 85, .08);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .feature-card:hover, .layer-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+      box-shadow: 0 1rem 2.5rem rgba(85, 53, 85, .14);
+    }
+
+    .feature-icon {
+      display: inline-grid;
+      width: 3rem;
+      height: 3rem;
+      place-items: center;
+      border-radius: .9rem;
+      background: var(--accent-light);
+      color: var(--primary);
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+
+    .architecture-flow {
+      border: 1px solid var(--accent);
+      border-radius: 1rem;
+      background: var(--accent-light);
+      color: var(--primary);
+    }
+
+    .layer-label { color: var(--primary); font-size: .75rem; font-weight: 800; letter-spacing: .1em; }
+
+    .step {
+      position: relative;
+      padding-left: 4.5rem;
+    }
+
+    .step:not(:last-child)::before {
+      position: absolute;
+      top: 3.2rem;
+      bottom: -1.5rem;
+      left: 1.48rem;
+      width: 2px;
+      background: var(--line);
+      content: "";
+    }
+
+    .step-number {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: grid;
+      width: 3rem;
+      height: 3rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--accent-light);
+      font-weight: 800;
+      box-shadow: 0 0 0 .45rem #fff;
+    }
+
+    pre {
+      margin: 0;
+      border-radius: 1rem;
+      background: var(--near-black);
+      color: #e5f7ef;
+      white-space: pre-wrap;
+    }
+
+    code { color: var(--primary); }
+    pre code { color: inherit; }
+    .env-key { color: var(--accent-light); }
+    .external-link { color: var(--primary); text-underline-offset: .2em; }
+    .external-link:hover, .external-link:focus { color: var(--secondary); }
+    footer { background: var(--near-black); color: var(--accent); }
+
+    @media (max-width: 575.98px) {
+      body { word-break: normal; }
+      .hero { padding-top: 7rem; }
+      .hero-title { font-size: 2.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top" aria-label="주요 탐색">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#top">
+        <span class="navbar-brand-mark" aria-hidden="true">N</span>
+        <span>News Scraper</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="메뉴 열기">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto gap-lg-2">
+          <li class="nav-item"><a class="nav-link" href="#features">주요 기능</a></li>
+          <li class="nav-item"><a class="nav-link" href="#architecture">아키텍처</a></li>
+          <li class="nav-item"><a class="nav-link" href="#exercise">실습 순서</a></li>
+          <li class="nav-item"><a class="nav-link" href="#run">실행 안내</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container position-relative z-1">
+        <div class="row align-items-center gy-5">
+          <div class="col-12 col-lg-8">
+            <p class="eyebrow mb-3">Clean Architecture Practice</p>
+            <h1 class="hero-title fw-bold mb-4">네이버 뉴스 스크래퍼</h1>
+            <p class="hero-copy mb-4">검색부터 발행까지, 포트와 어댑터로 연결합니다. 네이버 뉴스 API 결과를 콘솔에서 확인하고 GitHub Issue로 자동 발행하는 JDK 17 학습 프로젝트입니다.</p>
+            <div class="d-flex flex-wrap gap-2 mb-5" aria-label="핵심 기술">
+              <span class="badge rounded-pill tech-badge px-3 py-2">JDK 17</span>
+              <span class="badge rounded-pill tech-badge px-3 py-2">Bootstrap 5.3</span>
+              <span class="badge rounded-pill tech-badge px-3 py-2">외부 라이브러리 없음</span>
+              <span class="badge rounded-pill tech-badge px-3 py-2">Maven·Gradle 없음</span>
+            </div>
+            <div class="d-flex flex-column flex-sm-row gap-3">
+              <a class="btn btn-naver btn-lg px-4" href="https://github.com/aibe-7th/naver-new-scraper-oop" target="_blank" rel="noopener noreferrer">GitHub 저장소</a>
+              <a class="btn btn-outline-light btn-lg px-4" href="#architecture">구조 살펴보기</a>
+            </div>
+          </div>
+          <div class="col-12 col-lg-4">
+            <div class="border border-light border-opacity-10 rounded-4 bg-white bg-opacity-10 p-4">
+              <p class="small text-uppercase fw-bold text-white-50 mb-3">Two ways to run</p>
+              <div class="d-flex gap-3 mb-4">
+                <span class="feature-icon flex-shrink-0" aria-hidden="true">01</span>
+                <div><h2 class="h5 mb-1">로컬 콘솔</h2><p class="small text-white-50 mb-0">Scanner 입력 · 정확도순 SIM</p></div>
+              </div>
+              <div class="d-flex gap-3">
+                <span class="feature-icon flex-shrink-0" aria-hidden="true">02</span>
+                <div><h2 class="h5 mb-1">GitHub Actions</h2><p class="small text-white-50 mb-0">환경변수 입력 · 최신순 DATE</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-5" id="features">
+      <div class="container py-lg-5">
+        <div class="section-heading mb-5">
+          <p class="eyebrow mb-2">Features</p>
+          <h2 class="display-6 fw-bold mb-3">하나의 유스케이스, 두 가지 실행 방식</h2>
+          <p class="text-secondary mb-0">검색 결과의 제목·링크·발행일·요약을 수집하고, 실행 환경에 맞는 발행 어댑터로 전달합니다.</p>
+        </div>
+        <div class="row g-4">
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="card feature-card p-2"><div class="card-body"><span class="feature-icon mb-4" aria-hidden="true">⌨</span><h3 class="h5 fw-bold">대화형 콘솔 검색</h3><p class="text-secondary mb-0"><code>Scanner</code>로 검색어와 1~100개의 결과 수를 입력하고 콘솔에서 바로 확인합니다.</p></div></article>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="card feature-card p-2"><div class="card-body"><span class="feature-icon mb-4" aria-hidden="true">N</span><h3 class="h5 fw-bold">네이버 API 수집</h3><p class="text-secondary mb-0">JDK <code>HttpClient</code>로 뉴스 검색 API를 호출하고 HTML 태그와 주요 엔티티를 정제합니다.</p></div></article>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="card feature-card p-2"><div class="card-body"><span class="feature-icon mb-4" aria-hidden="true">#</span><h3 class="h5 fw-bold">GitHub Issue 발행</h3><p class="text-secondary mb-0">검색 결과를 Markdown으로 변환하고 검색 주제와 날짜가 포함된 Issue를 자동 생성합니다.</p></div></article>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="card feature-card p-2"><div class="card-body"><span class="feature-icon mb-4" aria-hidden="true">↕</span><h3 class="h5 fw-bold">정확도순 · 최신순</h3><p class="text-secondary mb-0">콘솔은 <code>SIM</code>, 자동화는 <code>DATE</code>를 사용해 목적에 맞는 정렬을 선택합니다.</p></div></article>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="card feature-card p-2"><div class="card-body"><span class="feature-icon mb-4" aria-hidden="true">17</span><h3 class="h5 fw-bold">표준 API만 사용</h3><p class="text-secondary mb-0">record, text block, <code>HttpClient</code> 등 JDK 17 기능만으로 HTTP와 JSON 처리를 학습합니다.</p></div></article>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="card feature-card p-2"><div class="card-body"><span class="feature-icon mb-4" aria-hidden="true">↻</span><h3 class="h5 fw-bold">주기적 자동 실행</h3><p class="text-secondary mb-0">GitHub Actions가 컴파일과 실행을 담당하며 수동 실행과 cron 예약 실행을 지원합니다.</p></div></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-soft py-5" id="architecture">
+      <div class="container py-lg-5">
+        <div class="row align-items-end gy-3 mb-5">
+          <div class="col-12 col-lg-7"><p class="eyebrow mb-2">Architecture</p><h2 class="display-6 fw-bold mb-0">바깥 기술이 안쪽 정책을 향하는 구조</h2></div>
+          <div class="col-12 col-lg-5"><p class="text-secondary mb-0">구체적인 API와 출력 방식은 애플리케이션 포트에 맞춰 구현됩니다. 핵심 모델과 유스케이스는 외부 기술을 알지 않습니다.</p></div>
+        </div>
+        <div class="architecture-flow d-flex flex-column flex-lg-row align-items-center justify-content-center gap-2 gap-lg-3 p-3 p-md-4 mb-5 fw-semibold text-center">
+          <span>presentation · infrastructure</span><span aria-hidden="true">→</span><span>application 포트</span><span aria-hidden="true">→</span><span>domain</span>
+        </div>
+        <div class="row g-4">
+          <div class="col-12 col-md-6 col-lg-3"><article class="card layer-card"><div class="card-body p-4"><p class="layer-label mb-2">01 · DOMAIN</p><h3 class="h5 fw-bold">핵심 데이터와 규칙</h3><p class="text-secondary small"><code>NewsResult</code> record가 결과와 문자열 정제를, <code>NewsCategory</code> enum이 SIM·DATE 조건을 표현합니다.</p><span class="badge text-bg-light">외부 기술 미의존</span></div></article></div>
+          <div class="col-12 col-md-6 col-lg-3"><article class="card layer-card"><div class="card-body p-4"><p class="layer-label mb-2">02 · APPLICATION</p><h3 class="h5 fw-bold">유스케이스와 포트</h3><p class="text-secondary small"><code>NewsService</code>가 수집과 발행을 조정하고 <code>NewsProvider</code>·<code>NewsPublisher</code> 계약을 정의합니다.</p><span class="badge text-bg-light">DIP 경계</span></div></article></div>
+          <div class="col-12 col-md-6 col-lg-3"><article class="card layer-card"><div class="card-body p-4"><p class="layer-label mb-2">03 · INFRASTRUCTURE</p><h3 class="h5 fw-bold">외부 연동 어댑터</h3><p class="text-secondary small"><code>NaverNewsProvider</code>가 수집 포트를, <code>GitHubIssuePublisher</code>가 발행 포트를 구현합니다.</p><span class="badge text-bg-light">API 교체 가능</span></div></article></div>
+          <div class="col-12 col-md-6 col-lg-3"><article class="card layer-card"><div class="card-body p-4"><p class="layer-label mb-2">04 · PRESENTATION</p><h3 class="h5 fw-bold">실행 진입점</h3><p class="text-secondary small"><code>ConsoleNewsApp</code>과 <code>AutomationNewsApp</code>이 환경에 맞는 포트 구현체를 조립합니다.</p><span class="badge text-bg-light">입력 방식 교체</span></div></article></div>
+        </div>
+        <div class="row g-4 mt-2">
+          <div class="col-12 col-lg-6"><div class="bg-white border rounded-4 p-4 h-100"><h3 class="h5 fw-bold">NewsProvider · 수집 포트</h3><p class="text-secondary mb-0">현재 네이버 어댑터 대신 다른 뉴스 공급자를 구현해도 <code>NewsService</code>는 바뀌지 않습니다.</p></div></div>
+          <div class="col-12 col-lg-6"><div class="bg-white border rounded-4 p-4 h-100"><h3 class="h5 fw-bold">NewsPublisher · 발행 포트</h3><p class="text-secondary mb-0">콘솔과 GitHub Issue뿐 아니라 파일·메신저 발행도 새 어댑터 추가로 확장할 수 있습니다.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-5" id="exercise">
+      <div class="container py-lg-5">
+        <div class="row g-5">
+          <div class="col-12 col-lg-4"><div class="position-lg-sticky" style="top: 6rem"><p class="eyebrow mb-2">Exercise Roadmap</p><h2 class="display-6 fw-bold mb-3">4단계로 완성하는 실습</h2><p class="text-secondary">안쪽 모델에서 시작해 동작을 빠르게 검증한 뒤, 로컬 앱을 자동화 환경으로 이전합니다.</p></div></div>
+          <div class="col-12 col-lg-8">
+            <div class="step pb-5"><span class="step-number">1</span><h3 class="h4 fw-bold">약식 클린 아키텍처 구현</h3><p class="text-secondary mb-0">domain 핵심 모델 → application 포트와 유스케이스 → infrastructure 어댑터 → presentation 진입점 순서로 구현하며 의존성 방향을 고정합니다.</p></div>
+            <div class="step pb-5"><span class="step-number">2</span><h3 class="h4 fw-bold">임시 main 메서드로 중간 검증</h3><p class="text-secondary mb-0">아직 TDD나 테스트 프레임워크를 도입하지 않습니다. 각 컴포넌트 직후 작은 입력과 출력을 직접 확인하고, 검증이 끝나면 임시 <code>main</code>을 제거합니다.</p></div>
+            <div class="step pb-5"><span class="step-number">3</span><h3 class="h4 fw-bold">Scanner 기반 콘솔 앱 완성</h3><p class="text-secondary mb-0">검색어와 개수를 입력받아 <code>NaverNewsProvider</code>와 <code>ConsolePublisher</code>를 조립합니다. 로컬 검색은 정확도순 SIM을 사용합니다.</p></div>
+            <div class="step"><span class="step-number">4</span><h3 class="h4 fw-bold">GitHub Actions 자동화로 이전</h3><p class="text-secondary mb-0">Scanner를 환경변수로, 콘솔 발행을 GitHub Issue 발행으로 교체합니다. 동일한 <code>NewsService</code>를 수정하지 않고 최신순 DATE 수집을 자동화합니다.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-soft py-5" id="run">
+      <div class="container py-lg-5">
+        <div class="section-heading mb-5"><p class="eyebrow mb-2">Quick Start</p><h2 class="display-6 fw-bold mb-3">환경변수 설정과 실행</h2><p class="text-secondary mb-0">JDK 17과 네이버 개발자센터에서 발급한 Client ID·Client Secret이 필요합니다.</p></div>
+        <div class="row g-4 align-items-stretch">
+          <div class="col-12 col-lg-7">
+            <div class="bg-white border rounded-4 p-4 p-md-5 h-100">
+              <ol class="d-flex flex-column gap-4 mb-0 ps-4">
+                <li><h3 class="h5 fw-bold">샘플 파일 복사</h3><pre class="p-3"><code>cp .env.sample .env</code></pre></li>
+                <li><h3 class="h5 fw-bold">인증정보 입력</h3><pre class="p-3"><code><span class="env-key">NAVER_CLIENT_ID</span>=발급한_Client_ID
+<span class="env-key">NAVER_CLIENT_SECRET</span>=발급한_Client_Secret
+<span class="env-key">NEWS_QUERY</span>=인공지능
+<span class="env-key">NEWS_DISPLAY</span>=10
+<span class="env-key">GITHUB_TOKEN</span>=
+<span class="env-key">GITHUB_REPOSITORY</span>=owner/repo</code></pre><p class="small text-secondary mt-2 mb-0"><code>.env</code>에는 인증정보가 포함되므로 커밋하지 않습니다.</p></li>
+                <li><h3 class="h5 fw-bold">IntelliJ 실행 구성 연결</h3><p class="text-secondary mb-2"><span class="fw-semibold">Run → Edit Configurations…</span>에서 Application을 추가하고 아래 항목을 지정합니다.</p><ul class="text-secondary"><li>Main class: <code>oop.scraper.presentation.ConsoleNewsApp</code></li><li>JRE: <code>17</code></li><li>환경변수 파일: 프로젝트 루트 <code>.env</code>의 절대경로</li><li>Working directory: 프로젝트 루트</li></ul></li>
+              </ol>
+            </div>
+          </div>
+          <div class="col-12 col-lg-5">
+            <aside class="d-flex flex-column gap-4 h-100">
+              <div class="bg-dark text-white rounded-4 p-4 p-md-5"><p class="small text-uppercase text-white-50 fw-bold">Console mode</p><h3 class="h4 fw-bold">검색어와 개수를 입력하세요</h3><p class="text-white-50 mb-0">실행 후 키워드와 1~100 사이의 검색 개수를 입력하면 정확도순 결과가 콘솔에 출력됩니다.</p></div>
+              <div class="bg-white border rounded-4 p-4 flex-grow-1"><h3 class="h5 fw-bold mb-3">네이버 API 준비</h3><p class="text-secondary">애플리케이션을 등록해 인증정보를 발급하고, API 명세에서 요청 헤더와 파라미터를 확인합니다.</p><div class="d-flex flex-column gap-2"><a class="external-link fw-semibold" href="https://developers.naver.com/apps/#/list" target="_blank" rel="noopener noreferrer">네이버 애플리케이션 등록/관리 ↗</a><a class="external-link fw-semibold" href="https://developers.naver.com/docs/serviceapi/search/news/news.md#뉴스" target="_blank" rel="noopener noreferrer">뉴스 검색 API 명세 ↗</a></div></div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-4">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+      <p class="mb-0">네이버 뉴스 스크래퍼 · Clean Architecture Practice</p>
+      <p class="small mb-0">JDK 17 · Bootstrap 5.3.8 · Noto Sans KR</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

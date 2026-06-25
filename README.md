@@ -240,8 +240,8 @@ flowchart LR
 
 ### 실행 주기
 
-- 현재 `.github/workflows/news-scraper.yml` 설정: `*/10 * * * *`
-- 현재 설정의 실제 실행 주기: 매 10분
+- 현재 `.github/workflows/news-scraper.yml` 설정: `3,37 * * * *`
+- 현재 설정의 실제 실행 주기: 매 30분 (GitHub Actions는 실행 보장을 안하므로 부하 발생 시 스케쥴링은 캔슬되기도 함)
 - 크론 작성법 : https://crontab.guru/
 
 ## 설계 특징
